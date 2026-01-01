@@ -9,8 +9,6 @@ static const uint8_t PIN_SCREEN_DC = 16;
 static const uint8_t PIN_SCREEN_CS = 17;
 static const uint8_t PIN_SCREEN_RST = 5;
 
-#define SCREEN_ROTATION 2
-
 static const uint8_t PIN_DFPLAYER_TX = 26; // DFPlayer TX -> ESP32 RX pin
 static const uint8_t PIN_DFPLAYER_RX = 27; // DFPlayer RX -> ESP32 TX pin
 
@@ -28,17 +26,22 @@ static const uint16_t DEFAULT_TRACK = 1;
 static const uint8_t MIN_VOLUME = 0;
 static const uint8_t MAX_VOLUME = 30;
 static const uint8_t DEFAULT_VOLUME = 20;
+static const uint16_t DEFAULT_TRACK_COUNT = 99; // optimistic UI upper bound when DFPlayer cannot report
 
 // Debounce timings (milliseconds)
 static const uint16_t DEBOUNCE_MS = 50;
 static const uint16_t HOLD_MS = 250;
 static const uint16_t REPEAT_MS = 80;
 static const uint16_t MODE_TOGGLE_HOLD_MS = 2000;
+static const uint16_t TIME_SET_HOLD_MS = 3000;
 
 // Battery measurement
 static const float ADC_REFERENCE = 3.3f;
 static const uint16_t ADC_MAX = 4095;
 static const float VOLTAGE_DIVIDER_RATIO = 2.0f; // 100k/100k divider doubles voltage
+static const float BAT_CAL_SCALE = 1.0f;          // fine tune if meter reads low/high
+static const float BAT_CAL_OFFSET = 0.0f;         // additive offset after scaling
+static const uint8_t BAT_FILTER_SAMPLES = 8;
 static const float CELL_MIN_V = 3.3f;
 static const float CELL_MAX_V = 4.2f;
 

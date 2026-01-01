@@ -10,7 +10,8 @@ enum class InputEvent {
   Prev,
   VolUp,
   VolDown,
-  ModeToggle
+  ModeToggle,
+  EnterTimeSet
 };
 
 void inputInit();

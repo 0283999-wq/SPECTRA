@@ -15,9 +15,12 @@ struct AudioStatus {
   uint16_t trackCount;
   bool online;
   PlaybackState state;
+  uint32_t elapsedMs;
+  uint32_t estDurationMs;
 };
 
 void audioInit();
+void audioApplySettings(uint16_t trackNumber, uint8_t volume);
 void audioLoop();
 void audioPlayTrack(uint16_t trackNumber);
 void audioNext();
