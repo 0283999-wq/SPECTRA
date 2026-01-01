@@ -18,6 +18,7 @@ static ButtonState btnVolDown{PIN_BTN_VOL_DOWN, false, true, true, false, 0, 0, 
 static ButtonState btnVolUp{PIN_BTN_VOL_UP, false, true, true, false, 0, 0, 0};
 static unsigned long comboStartMs = 0;
 static bool comboFired = false;
+static bool playHoldFired = false;
 
 static void primeButton(ButtonState &btn) {
   bool reading = digitalRead(btn.pin);
@@ -90,8 +91,16 @@ InputEvent inputPoll() {
 
   // Update touch buttons (edge detection only)
   if (updateButton(touchPrev)) return InputEvent::Prev;
-  if (updateButton(touchPlay)) return InputEvent::PlayPause;
+  if (updateButton(touchPlay)) {
+    playHoldFired = false;
+    return InputEvent::PlayPause;
+  }
   if (updateButton(touchNext)) return InputEvent::Next;
+
+  if (touchPlay.stablePressed && !playHoldFired && touchPlay.pressedAt != 0 && (now - touchPlay.pressedAt) >= TIME_SET_HOLD_MS) {
+    playHoldFired = true;
+    return InputEvent::EnterTimeSet;
+  }
 
   // Update mechanical volume buttons with repeat
   bool volDownPressed = updateButton(btnVolDown); // left = volume down

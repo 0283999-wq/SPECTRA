@@ -6,6 +6,22 @@
 #include <math.h>
 #include "vinyl_ui.h"
 
+#if defined(vinyl_ui_bitmap)
+#define VINYL_UI_BITMAP_PTR vinyl_ui_bitmap
+#elif defined(image_data_Image)
+#define VINYL_UI_BITMAP_PTR image_data_Image
+#else
+#error "vinyl_ui bitmap symbol not found; export image_data_Image or vinyl_ui_bitmap"
+#endif
+
+#ifndef VINYL_UI_WIDTH
+#define VINYL_UI_WIDTH 240
+#endif
+
+#ifndef VINYL_UI_HEIGHT
+#define VINYL_UI_HEIGHT 240
+#endif
+
 static Adafruit_GC9A01A display = Adafruit_GC9A01A(PIN_SCREEN_CS, PIN_SCREEN_DC, PIN_SCREEN_MOSI, PIN_SCREEN_SCK, PIN_SCREEN_RST);
 
 struct UIStateCache {
@@ -32,6 +48,9 @@ static unsigned long lastVinylStep = 0;
 static uint16_t vinylAngle = 0;
 static bool overlayPendingClear = false;
 static bool hudNeedsRestore = false;
+static uint8_t editHourCache = 0;
+static uint8_t editMinuteCache = 0;
+static bool editHourActive = true;
 
 static void formatTime(char *buf, size_t len, const ClockTime &clock) {
   uint8_t hours = clock.hour % 24;
@@ -353,6 +372,40 @@ static void drawBtHud(const BatteryStatus &bat, const ClockTime &clock, unsigned
   }
 }
 
+static void drawTimeSetHud(const BatteryStatus &bat, unsigned long now) {
+  (void)now;
+  display.fillScreen(COLOR_BG);
+  display.drawCircle(CENTER_X, CENTER_Y, UI_SAFE_RADIUS - 2, COLOR_DARK);
+  drawPanel(UI_SAFE_LEFT + 20, UI_SAFE_TOP + 14, UI_SAFE_DIAMETER - 40, 32, COLOR_ACCENT, COLOR_PANEL);
+  display.setTextSize(1);
+  display.setTextColor(COLOR_TEXT, COLOR_PANEL);
+  display.setCursor(UI_SAFE_LEFT + 32, UI_SAFE_TOP + 24);
+  display.print("SET TIME // SPECTRA");
+
+  drawPanel(UI_SAFE_LEFT + 28, CENTER_Y - 18, UI_SAFE_DIAMETER - 56, 40, COLOR_ACCENT, COLOR_PANEL);
+  display.setTextSize(3);
+  display.setTextColor(editHourActive ? COLOR_AMBER : COLOR_TEXT, COLOR_PANEL);
+  char buf[6];
+  snprintf(buf, sizeof(buf), "%02u", editHourCache);
+  display.setCursor(UI_SAFE_LEFT + 46, CENTER_Y - 8);
+  display.print(buf);
+  display.setTextColor(COLOR_ACCENT, COLOR_PANEL);
+  display.print(":");
+  display.setTextColor(editHourActive ? COLOR_TEXT : COLOR_AMBER, COLOR_PANEL);
+  snprintf(buf, sizeof(buf), "%02u", editMinuteCache);
+  display.print(buf);
+
+  display.setTextSize(1);
+  drawPanel(UI_SAFE_LEFT + 26, UI_SAFE_TOP + UI_SAFE_DIAMETER - 60, UI_SAFE_DIAMETER - 52, 34, COLOR_ACCENT, COLOR_PANEL);
+  display.setCursor(UI_SAFE_LEFT + 36, UI_SAFE_TOP + UI_SAFE_DIAMETER - 52);
+  display.setTextColor(COLOR_TEXT, COLOR_PANEL);
+  display.print("PLAY=SAVE  NEXT=FIELD");
+  display.setCursor(UI_SAFE_LEFT + 36, UI_SAFE_TOP + UI_SAFE_DIAMETER - 40);
+  display.print("VOL+/VOL-=ADJUST");
+
+  drawBatteryPanel(bat);
+}
+
 static bool audioChanged(const AudioStatus &a, const AudioStatus &b) {
   return a.track != b.track || a.volume != b.volume || a.state != b.state || a.online != b.online || a.trackCount != b.trackCount;
 }
@@ -361,9 +414,14 @@ static bool batteryChanged(const BatteryStatus &a, const BatteryStatus &b) {
   return a.percent != b.percent || a.level != b.level || fabs(a.voltage - b.voltage) > 0.02f;
 }
 
+void uiSyncTimeEdit(uint8_t hour, uint8_t minute, bool hourActive) {
+  editHourCache = hour % 24;
+  editMinuteCache = minute % 60;
+  editHourActive = hourActive;
+}
+
 void uiInit() {
   display.begin();
-  display.setRotation(SCREEN_ROTATION);
   display.setTextWrap(false);
   drawBackground();
   backgroundDrawn = true;
@@ -428,6 +486,8 @@ void uiUpdate(const AudioStatus &audio, const BatteryStatus &battery, UIMode mod
     }
 
     updateVolumeOverlay(audio, battery, timeNow, now);
+  } else if (mode == UIMode::TimeSet) {
+    drawTimeSetHud(battery, now);
   } else {
     if (batDiff || timeDiff || modeDiff) {
       drawBtHud(battery, timeNow, now);

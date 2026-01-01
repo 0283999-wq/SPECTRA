@@ -12,6 +12,8 @@ static bool initialized = false;
 static bool online = false;
 static uint16_t trackCount = 1;
 static unsigned long lastQuery = 0;
+static unsigned long trackStartedAt = 0;
+static const uint32_t fallbackTrackDurationMs = 210000UL; // 3.5 min default estimate
 
 static uint16_t detectTrackCount() {
   int16_t count = dfPlayer.readFileCounts();
@@ -41,6 +43,11 @@ void audioInit() {
   }
 }
 
+void audioApplySettings(uint16_t trackNumber, uint8_t volume) {
+  currentTrack = trackNumber == 0 ? DEFAULT_TRACK : trackNumber;
+  currentVolume = constrain(volume, MIN_VOLUME, MAX_VOLUME);
+}
+
 void audioLoop() {
   if (!initialized) return;
   unsigned long now = millis();
@@ -56,6 +63,7 @@ void audioPlayTrack(uint16_t trackNumber) {
     if (currentTrack <= trackCount) {
       dfPlayer.playMp3Folder(currentTrack);
       playbackState = PlaybackState::Playing;
+      trackStartedAt = millis();
     }
   }
 }
@@ -86,6 +94,7 @@ void audioTogglePause() {
   } else {
     dfPlayer.start();
     playbackState = PlaybackState::Playing;
+    if (trackStartedAt == 0) trackStartedAt = millis();
   }
 }
 
@@ -118,6 +127,17 @@ AudioStatus getAudioStatus() {
   s.trackCount = trackCount;
   s.online = online;
   s.state = playbackState;
+  unsigned long now = millis();
+  if (playbackState == PlaybackState::Playing && trackStartedAt == 0) {
+    trackStartedAt = now;
+  }
+  if (playbackState == PlaybackState::Stopped) {
+    s.elapsedMs = 0;
+  } else {
+    unsigned long anchor = (trackStartedAt == 0) ? now : trackStartedAt;
+    s.elapsedMs = now - anchor;
+  }
+  s.estDurationMs = fallbackTrackDurationMs;
   return s;
 }
 

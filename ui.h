@@ -13,11 +13,13 @@ struct ClockTime {
 
 enum class UIMode {
   DFP,
-  BT
+  BT,
+  TimeSet
 };
 
 void uiInit();
 void uiUpdate(const AudioStatus &audio, const BatteryStatus &battery, UIMode mode, const ClockTime &timeNow);
 void uiPulse(const char *label);
 void uiShowVolumeOverlay();
+void uiSyncTimeEdit(uint8_t hour, uint8_t minute, bool hourActive);
 
